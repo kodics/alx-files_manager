@@ -1,21 +1,8 @@
-import { before, after } from 'mocha';
-import dbClient from '../utils/db';
-import redisClient from '../utils/redisClient';
+import supertest from 'supertest';
+import chai from 'chai';
+import api from '../server';
 
-before(async () => {
-  // Setup testing environment
-  // Connect to test database
-  await dbClient.connect();
-
-  // Connect to test Redis server
-  await redisClient.connect();
-});
-
-after(async () => {
-  // Teardown testing environment
-  // Disconnect from test database
-  await dbClient.disconnect();
-
-  // Disconnect from test Redis server
-  await redisClient.disconnect();
-});
+global.app = api;
+global.request = supertest(api);
+global.expect = chai.expect;
+global.assert = chai.assert;

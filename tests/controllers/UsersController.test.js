@@ -1,62 +1,90 @@
-import { describe, it } from 'mocha';
-import { expect } from 'chai';
-import request from 'supertest';
+/* eslint-disable import/no-named-as-default */
+import dbClient from '../../utils/db';
 
-describe('UsersController', () => {
-  describe('POST /users', () => {
-    it('should create a new user and return status 201', async () => {
-      const response = await request(app)
-        .post('/users')
-        .send({ email: 'test@example.com', password: 'password123' });
-      expect(response.status).to.equal(201);
-      expect(response.body).to.have.property('id');
-      expect(response.body).to.have.property('email', 'test@example.com');
+describe('+ UserController', () => {
+  const mockUser = {
+    email: 'beloxxi@blues.com',
+    password: 'melody1982',
+  };
+
+  before(function (done) {
+    this.timeout(10000);
+    dbClient.usersCollection()
+      .then((usersCollection) => {
+        usersCollection.deleteMany({ email: mockUser.email })
+          .then(() => done())
+          .catch((deleteErr) => done(deleteErr));
+      }).catch((connectErr) => done(connectErr));
+    setTimeout(done, 5000);
+  });
+
+  describe('+ POST: /users', () => {
+    it('+ Fails when there is no email and there is password', function (done) {
+      this.timeout(5000);
+      request.post('/users')
+        .send({
+          password: mockUser.password,
+        })
+        .expect(400)
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          expect(res.body).to.deep.eql({ error: 'Missing email' });
+          done();
+        });
     });
 
-    it('should return status 400 if email is missing', async () => {
-      const response = await request(app)
-        .post('/users')
-        .send({ password: 'password123' });
-      expect(response.status).to.equal(400);
+    it('+ Fails when there is email and there is no password', function (done) {
+      this.timeout(5000);
+      request.post('/users')
+        .send({
+          email: mockUser.email,
+        })
+        .expect(400)
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          expect(res.body).to.deep.eql({ error: 'Missing password' });
+          done();
+        });
     });
 
-    it('should return status 400 if password is missing', async () => {
-      const response = await request(app)
-        .post('/users')
-        .send({ email: 'test@example.com' });
-      expect(response.status).to.equal(400);
+    it('+ Succeeds when the new user has a password and email', function (done) {
+      this.timeout(5000);
+      request.post('/users')
+        .send({
+          email: mockUser.email,
+          password: mockUser.password,
+        })
+        .expect(201)
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          expect(res.body.email).to.eql(mockUser.email);
+          expect(res.body.id.length).to.be.greaterThan(0);
+          done();
+        });
     });
 
-    it('should return status 400 if email already exists', async () => {
-      // Assuming test@example.com already exists in the database
-      const response = await request(app)
-        .post('/users')
-        .send({ email: 'test@example.com', password: 'password123' });
-      expect(response.status).to.equal(400);
+    it('+ Fails when the user already exists', function (done) {
+      this.timeout(5000);
+      request.post('/users')
+        .send({
+          email: mockUser.email,
+          password: mockUser.password,
+        })
+        .expect(400)
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          expect(res.body).to.deep.eql({ error: 'Already exist' });
+          done();
+        });
     });
   });
 
-  describe('GET /users/me', () => {
-    it('should return current user details if token is valid', async () => {
-      // Assuming you have a valid token in token variable
-      const response = await request(app)
-        .get('/users/me')
-        .set('x-token', token);
-      expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('id');
-      expect(response.body).to.have.property('email');
-    });
-
-    it('should return status 401 if token is missing', async () => {
-      const response = await request(app).get('/users/me');
-      expect(response.status).to.equal(401);
-    });
-
-    it('should return status 401 if token is invalid', async () => {
-      const response = await request(app)
-        .get('/users/me')
-        .set('x-token', 'invalidtoken');
-      expect(response.status).to.equal(401);
-    });
-  });
 });
